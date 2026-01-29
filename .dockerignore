@@ -1,0 +1,16 @@
+# Ignore data and test folders
+data/
+input/
+output/
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# IDE
+.vscode/
+.idea/

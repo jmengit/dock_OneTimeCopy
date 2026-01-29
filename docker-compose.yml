@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  one-time-copy:
+    build: .
+    container_name: one-time-copy
+    restart: unless-stopped
+    volumes:
+      # Mount your input folder (source files)
+      - ./input:/input:ro
+      
+      # Mount your output folder (destination)
+      - ./output:/output
+      
+      # Mount data folder to persist the tracking file
+      # This is CRITICAL - it tracks which files have been copied
+      - ./data:/data
+    
+    environment:
+      # How often to check for new files (in seconds)
+      - SYNC_INTERVAL=60
+      
+      # Set to "true" to run once and exit, "false" to run continuously
+      - RUN_ONCE=false
+      
+      # Comma-separated list of file extensions (without dots)
+      # Examples: "jpg,png,gif" or "pdf,docx,xlsx"
+      # Leave empty to process all files
+      - FILE_EXTENSIONS=
+      
+      # Extension filter mode:
+      # "include" = ONLY copy files with these extensions
+      # "exclude" = copy all files EXCEPT those with these extensions
+      - EXTENSION_MODE=include
