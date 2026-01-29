@@ -32,3 +32,10 @@ services:
       # "include" = ONLY copy files with these extensions
       # "exclude" = copy all files EXCEPT those with these extensions
       - EXTENSION_MODE=include
+      
+      # Logging verbosity level
+      # DEBUG = Show all messages including detailed debugging info
+      # INFO = Show informational messages and above (default)
+      # WARN = Show only warnings and errors
+      # ERROR = Show only errors
+      - LOG_LEVEL=INFO

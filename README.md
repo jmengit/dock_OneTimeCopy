@@ -54,6 +54,7 @@ Environment variables in `docker-compose.yml`:
 | `RUN_ONCE` | `false` | Set to `true` to run once and exit |
 | `FILE_EXTENSIONS` | *(empty)* | Comma-separated list of extensions (e.g., `jpg,png,pdf`) |
 | `EXTENSION_MODE` | `include` | `include` = only copy listed extensions, `exclude` = skip listed extensions |
+| `LOG_LEVEL` | `INFO` | Logging verbosity: `DEBUG`, `INFO`, `WARN`, or `ERROR` |
 
 ### Extension Filter Examples
 
@@ -75,6 +76,26 @@ environment:
 ```yaml
 environment:
   - FILE_EXTENSIONS=
+```
+
+### Log Level Examples
+
+**Minimal logging (errors only):**
+```yaml
+environment:
+  - LOG_LEVEL=ERROR
+```
+
+**Verbose debugging:**
+```yaml
+environment:
+  - LOG_LEVEL=DEBUG
+```
+
+**Standard logging (default):**
+```yaml
+environment:
+  - LOG_LEVEL=INFO
 ```
 
 ## Volume Mounts

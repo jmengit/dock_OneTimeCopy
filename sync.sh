@@ -15,6 +15,14 @@ SYNC_INTERVAL="${SYNC_INTERVAL:-60}"       # Default: check every 60 seconds
 RUN_ONCE="${RUN_ONCE:-false}"               # Default: run continuously
 FILE_EXTENSIONS="${FILE_EXTENSIONS:-}"      # Comma-separated list of extensions (e.g., "jpg,png,pdf")
 EXTENSION_MODE="${EXTENSION_MODE:-include}" # "include" = only copy these extensions, "exclude" = skip these extensions
+LOG_LEVEL="${LOG_LEVEL:-INFO}"              # Default: INFO (options: DEBUG, INFO, WARN, ERROR)
+
+# Convert log level to uppercase
+LOG_LEVEL=$(echo "$LOG_LEVEL" | tr '[:lower:]' '[:upper:]')
+
+# Log level values for comparison
+declare -A LOG_LEVELS=([DEBUG]=0 [INFO]=1 [WARN]=2 [ERROR]=3)
+CURRENT_LOG_LEVEL=${LOG_LEVELS[$LOG_LEVEL]:-1}
 
 # Colors for logging
 RED='\033[0;31m'
@@ -23,20 +31,28 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+log_debug() {
+    if [ $CURRENT_LOG_LEVEL -le 0 ]; then
+        echo -e "${BLUE}[DEBUG]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
+    fi
+}
+
 log_info() {
-    echo -e "${GREEN}[INFO]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
+    if [ $CURRENT_LOG_LEVEL -le 1 ]; then
+        echo -e "${GREEN}[INFO]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
+    fi
 }
 
 log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
+    if [ $CURRENT_LOG_LEVEL -le 2 ]; then
+        echo -e "${YELLOW}[WARN]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
+    fi
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
-}
-
-log_debug() {
-    echo -e "${BLUE}[DEBUG]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
+    if [ $CURRENT_LOG_LEVEL -le 3 ]; then
+        echo -e "${RED}[ERROR]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
+    fi
 }
 
 # Ensure tracking files exist
@@ -145,6 +161,13 @@ copy_file() {
     local dest="$OUTPUT_DIR/$relative_path"
     local dest_dir=$(dirname "$dest")
     
+    # Check if source and destination are the same file
+    if [ -e "$dest" ] && [ "$src" -ef "$dest" ]; then
+        log_warn "Skipped (same file): $relative_path - Input and output directories appear to be the same location!"
+        mark_as_copied "$relative_path" "$hash"
+        return 2  # Return different code to track this separately
+    fi
+    
     # Create destination directory if needed
     if [ ! -d "$dest_dir" ]; then
         if ! mkdir -p "$dest_dir" 2>&1; then
@@ -163,6 +186,13 @@ copy_file() {
         log_info "Copied: $relative_path (hash: ${hash:0:12}...)"
         return 0
     else
+        # Check if error is "same file"
+        if echo "$cp_error" | grep -q "are the same file"; then
+            log_warn "Skipped (same file): $relative_path"
+            mark_as_copied "$relative_path" "$hash"
+            return 2
+        fi
+        
         log_error "Failed to copy: $relative_path"
         log_error "Source: $src"
         log_error "Destination: $dest"
@@ -187,6 +217,7 @@ sync_files() {
     local copied_count=0
     local skipped_count=0
     local skipped_ext_count=0
+    local same_file_count=0
     local error_count=0
     
     log_info "Starting sync scan..."
@@ -217,15 +248,31 @@ sync_files() {
         elif is_path_already_copied "$relative_path"; then
             ((skipped_count++))
         else
-            if copy_file "$file" "$relative_path" "$hash"; then
+            local copy_result
+            copy_file "$file" "$relative_path" "$hash"
+            copy_result=$?
+            
+            if [ $copy_result -eq 0 ]; then
                 ((copied_count++))
+            elif [ $copy_result -eq 2 ]; then
+                ((same_file_count++))
             else
                 ((error_count++))
             fi
         fi
     done < <(find "$INPUT_DIR" -type f -print0 2>/dev/null)
     
-    log_info "Sync complete - Copied: $copied_count, Skipped (already copied): $skipped_count, Skipped (extension filter): $skipped_ext_count, Errors: $error_count"
+    log_info "Sync complete - Copied: $copied_count, Skipped (already copied): $skipped_count, Skipped (extension filter): $skipped_ext_count, Same file warnings: $same_file_count, Errors: $error_count"
+    
+    if [ $same_file_count -gt 0 ]; then
+        log_warn "============================================"
+        log_warn "WARNING: $same_file_count files were skipped because input and output appear to be the same location!"
+        log_warn "Check your docker-compose.yml volume mounts:"
+        log_warn "  - ./input:/input:ro"
+        log_warn "  - ./output:/output"
+        log_warn "Make sure 'input' and 'output' are DIFFERENT folders on your host system!"
+        log_warn "============================================"
+    fi
 }
 
 # Cleanup function
@@ -249,6 +296,7 @@ main() {
     log_info "Hash Tracking File: $HASH_TRACKING_FILE"
     log_info "Sync Interval: ${SYNC_INTERVAL}s"
     log_info "Run Once Mode: $RUN_ONCE"
+    log_info "Log Level: $LOG_LEVEL"
     if [ -n "$FILE_EXTENSIONS" ]; then
         log_info "Extension Filter: $FILE_EXTENSIONS"
         log_info "Extension Mode: $EXTENSION_MODE (${EXTENSION_MODE}d extensions)"
