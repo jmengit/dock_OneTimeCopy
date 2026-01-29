@@ -147,17 +147,37 @@ copy_file() {
     
     # Create destination directory if needed
     if [ ! -d "$dest_dir" ]; then
-        mkdir -p "$dest_dir"
-        log_info "Created directory: $dest_dir"
+        if ! mkdir -p "$dest_dir" 2>&1; then
+            local mkdir_error=$(mkdir -p "$dest_dir" 2>&1)
+            log_error "Failed to create directory: $dest_dir"
+            log_error "mkdir error: $mkdir_error"
+            return 1
+        fi
+        log_debug "Created directory: $dest_dir"
     fi
     
-    # Copy the file
-    if cp -p "$src" "$dest" 2>/dev/null; then
+    # Copy the file with error capture
+    local cp_error
+    if cp_error=$(cp -p "$src" "$dest" 2>&1); then
         mark_as_copied "$relative_path" "$hash"
         log_info "Copied: $relative_path (hash: ${hash:0:12}...)"
         return 0
     else
         log_error "Failed to copy: $relative_path"
+        log_error "Source: $src"
+        log_error "Destination: $dest"
+        log_error "cp error: $cp_error"
+        
+        # Check if source file is readable
+        if [ ! -r "$src" ]; then
+            log_error "Source file is not readable"
+        fi
+        
+        # Check destination directory is writable
+        if [ ! -w "$dest_dir" ]; then
+            log_error "Destination directory is not writable: $dest_dir"
+        fi
+        
         return 1
     fi
 }
