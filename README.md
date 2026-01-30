@@ -209,7 +209,7 @@ dock_OneTimeCopy/
 
 ## Notes
 
-- Subdirectories are preserved during copy
+- Subdirectories are preserved during copy unless used with FLATTEN_OUTPUT
 - File permissions and timestamps are preserved (`cp -p`)
 - The input folder is mounted read-only for safety
 - Files are tracked by SHA256 hash, so renamed files won't be copied again
