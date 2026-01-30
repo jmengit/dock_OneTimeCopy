@@ -51,6 +51,7 @@ jobs:
 
       # ✅ Build and Push both tags
       - name: Build and push Docker image
+        id: build-and-push
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -65,7 +66,7 @@ jobs:
       - name: Sign published Docker image
         if: startsWith(github.ref, 'refs/tags/v')
         env:
+          TAGS: ${{ steps.vars.outputs.VERSION_TAG }}
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
-          VERSION_TAG: ${{ steps.vars.outputs.VERSION_TAG }}
         run: |
-          cosign sign --yes ${VERSION_TAG}@${DIGEST}
+          echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
