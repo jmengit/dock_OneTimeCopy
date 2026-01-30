@@ -54,6 +54,7 @@ Environment variables in `docker-compose.yml`:
 | `RUN_ONCE` | `false` | Set to `true` to run once and exit |
 | `FILE_EXTENSIONS` | *(empty)* | Comma-separated list of extensions (e.g., `jpg,png,pdf`) |
 | `EXTENSION_MODE` | `include` | `include` = only copy listed extensions, `exclude` = skip listed extensions |
+| `FLATTEN_OUTPUT` | `false` | Set to `true` to copy only files (no folders) to a flat output directory |
 | `LOG_LEVEL` | `INFO` | Logging verbosity: `DEBUG`, `INFO`, `WARN`, or `ERROR` |
 
 ### Extension Filter Examples
@@ -76,6 +77,41 @@ environment:
 ```yaml
 environment:
   - FILE_EXTENSIONS=
+```
+
+### Flatten Output Examples
+
+**Create a flat output directory (no subdirectories):**
+```yaml
+environment:
+  - FLATTEN_OUTPUT=true
+```
+
+This will copy only files from the input folder, ignoring all subdirectory structure. All files will be placed directly in the output folder root, resulting in a completely flat directory.
+
+**Example:**
+```
+Input folder:
+  /input/
+    file1.txt
+    photos/photo1.jpg
+    docs/reports/report.pdf
+
+Output folder (with FLATTEN_OUTPUT=true):
+  /output/
+    file1.txt
+    photo1.jpg
+    report.pdf
+```
+
+**Note:** If you have files with the same name in different subdirectories, the last one processed will overwrite previous ones. Consider using extension filters with flatten mode if needed.
+
+**Combine with extension filter to flatten only specific file types:**
+```yaml
+environment:
+  - FLATTEN_OUTPUT=true
+  - FILE_EXTENSIONS=jpg,png,gif
+  - EXTENSION_MODE=include
 ```
 
 ### Log Level Examples

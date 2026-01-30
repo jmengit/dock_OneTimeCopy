@@ -15,6 +15,7 @@ SYNC_INTERVAL="${SYNC_INTERVAL:-60}"       # Default: check every 60 seconds
 RUN_ONCE="${RUN_ONCE:-false}"               # Default: run continuously
 FILE_EXTENSIONS="${FILE_EXTENSIONS:-}"      # Comma-separated list of extensions (e.g., "jpg,png,pdf")
 EXTENSION_MODE="${EXTENSION_MODE:-include}" # "include" = only copy these extensions, "exclude" = skip these extensions
+FLATTEN_OUTPUT="${FLATTEN_OUTPUT:-false}"   # Default: false, when true copies only files to a flat output directory
 LOG_LEVEL="${LOG_LEVEL:-INFO}"              # Default: INFO (options: DEBUG, INFO, WARN, ERROR)
 
 # Convert log level to uppercase
@@ -158,8 +159,20 @@ copy_file() {
     local src="$1"
     local relative_path="$2"
     local hash="$3"
-    local dest="$OUTPUT_DIR/$relative_path"
-    local dest_dir=$(dirname "$dest")
+    
+    # Determine destination path based on FLATTEN_OUTPUT setting
+    local dest
+    local dest_dir
+    if [ "$FLATTEN_OUTPUT" = "true" ]; then
+        # Flatten: copy only the filename to output root
+        local filename=$(basename "$src")
+        dest="$OUTPUT_DIR/$filename"
+        dest_dir="$OUTPUT_DIR"
+    else
+        # Normal: preserve directory structure
+        dest="$OUTPUT_DIR/$relative_path"
+        dest_dir=$(dirname "$dest")
+    fi
     
     # Check if source and destination are the same file
     if [ -e "$dest" ] && [ "$src" -ef "$dest" ]; then
@@ -296,6 +309,7 @@ main() {
     log_info "Hash Tracking File: $HASH_TRACKING_FILE"
     log_info "Sync Interval: ${SYNC_INTERVAL}s"
     log_info "Run Once Mode: $RUN_ONCE"
+    log_info "Flatten Output: $FLATTEN_OUTPUT"
     log_info "Log Level: $LOG_LEVEL"
     if [ -n "$FILE_EXTENSIONS" ]; then
         log_info "Extension Filter: $FILE_EXTENSIONS"

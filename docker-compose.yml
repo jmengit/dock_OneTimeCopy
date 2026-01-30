@@ -33,6 +33,12 @@ services:
       # "exclude" = copy all files EXCEPT those with these extensions
       - EXTENSION_MODE=include
       
+      # Flatten output directory:
+      # Set to "true" to copy only files (not folders) to a flat output directory
+      # All files will be placed directly in the output root, ignoring subdirectory structure
+      # Set to "false" to preserve the original directory structure (default)
+      - FLATTEN_OUTPUT=false
+      
       # Logging verbosity level
       # DEBUG = Show all messages including detailed debugging info
       # INFO = Show informational messages and above (default)
